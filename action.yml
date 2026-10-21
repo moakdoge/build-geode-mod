@@ -3,9 +3,9 @@ description: Builds a Geode mod
 
 inputs:
   sdk:
-    description: Which version of the SDK to use, defaults to latest release. Set to 'given' to use the version specified in mod.json, 'nightly' for latest commit, 'latest' for latest release
+    description: Which version of the SDK to use. Defaults to 'v6'. Set to 'given' to use the version specified in mod.json, 'nightly' for latest commit, 'latest' for latest release
     required: false
-    default: given
+    default: v6
   cli:
     description: Which CLI version to use, defaults to latest release.
     required: false
@@ -185,27 +185,6 @@ runs:
         tar -xf dump_syms.tar
         echo "$GITHUB_WORKSPACE/dump_syms-x86_64-unknown-linux-gnu" >> $GITHUB_PATH
 
-    # - name: Fix Ubuntu weirdness
-    #   shell: bash
-    #   run: |
-    #     sudo apt install ninja-build &&
-    #     sudo add-apt-repository ppa:ubuntu-toolchain-r/test &&
-    #     sudo apt-get update &&
-    #     sudo apt-get install --only-upgrade libstdc++6
-    #   if: steps.platform.outputs.id == 'linux' && (steps.platform.outputs.target_id == 'android32' || steps.platform.outputs.target_id == 'android64')
-
-    # - name: Update LLVM (Windows)
-    #       if: steps.platform.outputs.id == 'win'
-    #             shell: bash
-    #                   run: choco upgrade llvm
-
-    # - name: Install LLVM (MacOS)
-    #   shell: bash
-    #   run: |
-    #     brew install llvm
-    #     echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
-    #   if: steps.platform.outputs.id == 'mac'
-
     - name: Download bindings repo
       if: inputs.bindings != 'geode-sdk/bindings' || inputs.bindings-ref != ''
       uses: actions/checkout@v7
@@ -234,28 +213,14 @@ runs:
         mkdir -p "$CLI_PROFILE/Contents/geode/mods"
         geode profile add --name GithubActions "$CLI_PROFILE/GeometryDash.exe" win
 
-        geode sdk install "${{ github.workspace }}/geode-sdk-clone"
+        geode sdk install "${{ github.workspace }}/geode-sdk-clone" --branch v6
 
         # silly github actions wont refresh the env
         export GEODE_SDK="${{ github.workspace }}/geode-sdk-clone"
         echo "GEODE_SDK=$GEODE_SDK" >> $GITHUB_ENV
 
-        if [ "${{ inputs.sdk }}" == "nightly" ]; then
-          geode sdk update nightly
-          geode sdk install-binaries --platform ${{ steps.platform.outputs.target_id }}
-        elif [ "${{ inputs.sdk }}" == "latest" ]; then
-          geode sdk update stable
-          geode sdk install-binaries --platform ${{ steps.platform.outputs.target_id }}
-        elif [ "${{ inputs.sdk }}" == "given" ]; then
-          export MOD_JSON_PATH=$(find . -name "mod.json" -not -path "./geode-sdk-clone/*" -print | sort -r | head -n 1)
-          export TARGET_GEODE_VERSION=$(jq -r '.geode' $MOD_JSON_PATH)
-          echo "Updating to version $TARGET_GEODE_VERSION from $MOD_JSON_PATH"
-          geode sdk update "$TARGET_GEODE_VERSION"
-          geode sdk install-binaries --platform ${{ steps.platform.outputs.target_id }} --version "$TARGET_GEODE_VERSION"
-        else
-          geode sdk update ${{ inputs.sdk }}
-          geode sdk install-binaries --platform ${{ steps.platform.outputs.target_id }}
-        fi
+        geode sdk update v6
+        geode sdk install-binaries --platform ${{ steps.platform.outputs.target_id }}
 
         export CPM_CACHE="${{ github.workspace }}/cpm-cache"
         echo "CPM_SOURCE_CACHE=$CPM_CACHE" >> $GITHUB_ENV
@@ -268,7 +233,6 @@ runs:
 
         NDK_PATH="/usr/local/lib/android/sdk/ndk/${{ inputs.android-ndk-version }}"
         if [ "${{ inputs.android-ndk-version }}" = "" ]; then
-          # NDK_PATH="$ANDROID_NDK_LATEST_HOME"
           NDK_PATH=/usr/local/lib/android/sdk/ndk/29.0.14206865
         fi
 
