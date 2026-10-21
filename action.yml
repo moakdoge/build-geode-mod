@@ -194,7 +194,7 @@ runs:
         path: bindings-repo
 
     - name: Setup bindings enviroment
-      if: inputs.bindings != 'geode-sdk/bindings' || inputs.bindings-ref != ''
+      if: inputs.bindings != 'geode-sdk/bindings' || (inputs.bindings-ref != '' && inputs.bindings-ref != 'v6')
       shell: bash
       run: echo "GEODE_BINDINGS_REPO_PATH=$GITHUB_WORKSPACE/bindings-repo" >> $GITHUB_ENV
 
@@ -213,13 +213,13 @@ runs:
         mkdir -p "$CLI_PROFILE/Contents/geode/mods"
         geode profile add --name GithubActions "$CLI_PROFILE/GeometryDash.exe" win
 
-        geode sdk install "${{ github.workspace }}/geode-sdk-clone" --branch v6
+        git clone --branch v6 --depth 1 https://github.com/geode-sdk/geode.git "${{ github.workspace }}/geode-sdk-clone"
+        geode sdk install "${{ github.workspace }}/geode-sdk-clone"
 
         # silly github actions wont refresh the env
         export GEODE_SDK="${{ github.workspace }}/geode-sdk-clone"
         echo "GEODE_SDK=$GEODE_SDK" >> $GITHUB_ENV
 
-        geode sdk update v6
         geode sdk install-binaries --platform ${{ steps.platform.outputs.target_id }}
 
         export CPM_CACHE="${{ github.workspace }}/cpm-cache"
@@ -306,7 +306,7 @@ runs:
 
     - name: Upload artifacts
       if: ${{ inputs.combine == 'true' }}
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v4
       with:
         name: "geode-build-${{ steps.platform.outputs.target_id }}"
         path: |
